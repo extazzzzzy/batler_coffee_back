@@ -20,7 +20,7 @@ async def health_check():
     return {"status": "ok", "services": ["fastapi", "telegram_bot"]}
 
 def run_fastapi():
-    uvicorn.run(app, host=os.getenv("DEPLOY_HOST"), port=os.getenv("DEPLOY_PORT"))
+    uvicorn.run(app, host=os.getenv("DEPLOY_HOST"), port=int(os.getenv("DEPLOY_PORT")))
 
 async def run_telegram_bot():
     await start_bot()
