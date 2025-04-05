@@ -1,5 +1,6 @@
-Python 3.13.2
-python -m venv venv
+Python 3.8.0
+py -3.8 -m venv venv
 venv/Scripts/Activate
-pip install fastapi bcrypt telebot dotenv uvicorn supabase
+python -m pip install --upgrade pip
+pip install fastapi bcrypt telebot dotenv uvicorn supabase jwt jose python-jose
 python main.py

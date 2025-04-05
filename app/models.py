@@ -8,3 +8,8 @@ class VerifyRequest(BaseModel):
 class AuthRequest(BaseModel):
     phone_number: str
     input_code: str
+
+class UserDataRequest(BaseModel):
+    token: str
+    name: str
+    birthday: str

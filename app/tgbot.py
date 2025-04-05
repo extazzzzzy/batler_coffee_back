@@ -51,7 +51,6 @@ def send_code(message):
             return
 
         code = str(random.randint(10000, 99999)).encode('utf-8') # формат b'12345'
-        print(code)
         update_response = supabase.table("verify_codes") \
             .update({"code": str(bcrypt.hashpw(code, bcrypt.gensalt()))}) \
             .eq("phone_number", phone_number) \
