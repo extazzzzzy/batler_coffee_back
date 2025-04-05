@@ -32,19 +32,19 @@ def run_bot_wrapper():
 if __name__ == "__main__":
     # Создаем процессы для сервера и бота
     fastapi_process = multiprocessing.Process(target=run_fastapi)
-    bot_process = multiprocessing.Process(target=run_bot_wrapper)
+    #bot_process = multiprocessing.Process(target=run_bot_wrapper)
     fastapi_process.start()
-    bot_process.start()
+    #bot_process.start()
 
     try:
         # Ожидаем завершения процессов (фактически будет работать бесконечно)
         fastapi_process.join()
-        bot_process.join()
+        #bot_process.join()
     except KeyboardInterrupt:
         # Корректная обработка Ctrl+C
         print("\nОстановка сервера...")
         fastapi_process.terminate()
-        bot_process.terminate()
+        #bot_process.terminate()
         fastapi_process.join()
-        bot_process.join()
+        #bot_process.join()
         print("Сервер и бот остановлены")

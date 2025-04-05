@@ -73,3 +73,5 @@ def send_code(message):
 def start_bot():
     print("Бот запущен!")
     bot.polling(none_stop=True)
+
+start_bot()
