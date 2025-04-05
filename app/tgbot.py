@@ -10,7 +10,7 @@ load_dotenv()
 
 # Токен вашего бота (замените на свой)
 TOKEN =  os.getenv("TELEGRAM_API_TOKEN")
-bot = telebot.TeleBot(TOKEN)
+bot = telebot.TeleBot(TOKEN, skip_pending=True)
 
 # Обработчик команды /start
 @bot.message_handler(commands=['start'])
