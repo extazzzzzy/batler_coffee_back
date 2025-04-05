@@ -1,13 +1,16 @@
 import telebot
 from telebot import types
-from app.dependencies import supabase
 from dotenv import load_dotenv
 import os
 import random
 import bcrypt
+from supabase import create_client
 
 load_dotenv()
-
+supabase = create_client(
+    os.getenv("SUPABASE_URL"),
+    os.getenv("SUPABASE_KEY")
+)
 # Токен вашего бота (замените на свой)
 TOKEN =  os.getenv("TELEGRAM_API_TOKEN")
 bot = telebot.TeleBot(TOKEN, skip_pending=True)
