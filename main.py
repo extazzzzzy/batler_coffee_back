@@ -6,6 +6,7 @@ import asyncio
 from app.tgbot import start_bot  # Импорт функции запуска бота
 from app.dependencies import supabase
 import multiprocessing
+import os
 
 load_dotenv()
 
@@ -19,7 +20,7 @@ async def health_check():
     return {"status": "ok", "services": ["fastapi", "telegram_bot"]}
 
 def run_fastapi():
-    uvicorn.run(app, host="localhost", port=8000)
+    uvicorn.run(app, host=os.getenv("DEPLOY_HOST"), port=os.getenv("DEPLOY_PORT"))
 
 async def run_telegram_bot():
     await start_bot()
