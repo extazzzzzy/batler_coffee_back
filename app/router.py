@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from app.models import VerifyRequest, AuthRequest, UserDataRequest
+from app.models import VerifyRequest, AuthRequest, UserDataRequest, CheckValidateTokenRequest
 import bcrypt
 import os
 from jose import jwt
@@ -53,6 +53,7 @@ def create_router(supabase):
         except Exception as e:
             raise HTTPException(500, detail=str(e))
 
+    # Маршрут для подтверждения кода и входа
     @router.post("/auth")
     async def auth(request: AuthRequest):
         # Проверка правильности кода
@@ -102,7 +103,7 @@ def create_router(supabase):
             "is_new_user": is_new
         }
     
-
+    # Маршрут для изменения пользовательских данных
     @router.post("/save_userdata")
     # Изменение имени и дня рождения пользователя
     async def save_userdata(request: UserDataRequest):
@@ -121,6 +122,16 @@ def create_router(supabase):
             "status": "access"
         }
 
+    # Маршрут для получения информации о действительности токена
+    @router.post("/check_validate_token")
+    async def check_validate_token(request: CheckValidateTokenRequest):
+        if (is_existing_token(request)):
+            return {
+                "validate": True
+            }
+        return {
+            "validate": False
+        }
 
     return router
 

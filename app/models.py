@@ -13,3 +13,6 @@ class UserDataRequest(BaseModel):
     token: str
     name: str
     birthday: str
+
+class CheckValidateTokenRequest(BaseModel):
+    token: str
