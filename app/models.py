@@ -14,5 +14,5 @@ class UserDataRequest(BaseModel):
     name: str
     birthday: str
 
-class CheckValidateTokenRequest(BaseModel):
+class UseOnlyTokenRequest(BaseModel):
     token: str

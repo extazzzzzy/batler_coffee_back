@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException
-from app.models import VerifyRequest, AuthRequest, UserDataRequest, CheckValidateTokenRequest
+from fastapi import APIRouter, HTTPException, status
+from app.models import VerifyRequest, AuthRequest, UserDataRequest, UseOnlyTokenRequest
 import bcrypt
 import os
 from jose import jwt
@@ -108,7 +108,9 @@ def create_router(supabase):
     # Изменение имени и дня рождения пользователя
     async def save_userdata(request: UserDataRequest):
         if not is_existing_token(request):
-            return {"isValidateToken": "False"}
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
         user_id = (supabase.table("personal_access_tokens") \
             .select("user_id") \
             .eq("token", hash_token(request.token)) \
@@ -122,9 +124,34 @@ def create_router(supabase):
             "status": "access"
         }
 
+    # Маршрут для получения пользовательских данных
+    @router.post("/fetch_userdata")
+    # Изменение имени и дня рождения пользователя
+    async def fetch_userdata(request: UseOnlyTokenRequest):
+        if not is_existing_token(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        user_id = (supabase.table("personal_access_tokens") \
+            .select("user_id") \
+            .eq("token", hash_token(request.token)) \
+            .execute()).data[0]['user_id']
+        name = (supabase.table("users") \
+            .select("name") \
+            .eq("id", user_id) \
+            .execute()).data[0]['name']
+        birthday = (supabase.table("users") \
+            .select("birthday") \
+            .eq("id", user_id) \
+            .execute()).data[0]['birthday']
+        
+        return {
+            "name": name,
+            "birthday": birthday,
+        }
     # Маршрут для получения информации о действительности токена
     @router.post("/check_validate_token")
-    async def check_validate_token(request: CheckValidateTokenRequest):
+    async def check_validate_token(request: UseOnlyTokenRequest):
         if (is_existing_token(request)):
             return {
                 "validate": True
