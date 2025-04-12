@@ -144,10 +144,15 @@ def create_router(supabase):
             .select("birthday") \
             .eq("id", user_id) \
             .execute()).data[0]['birthday']
+        role = (supabase.table("users") \
+            .select("role") \
+            .eq("id", user_id) \
+            .execute()).data[0]['role']
         
         return {
             "name": name,
             "birthday": birthday,
+            "role": role,
         }
     # Маршрут для получения информации о действительности токена
     @router.post("/check_validate_token")
