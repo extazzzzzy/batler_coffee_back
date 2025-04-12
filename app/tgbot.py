@@ -39,6 +39,7 @@ def send_code(message):
     try:
         phone_number = message.contact.phone_number
         phone_number = '+' + ''.join(c for c in phone_number if c.isdigit())
+        print(phone_number)
         response = supabase.table("verify_codes") \
             .select("id") \
             .eq("phone_number", phone_number) \
