@@ -164,6 +164,46 @@ def create_router(supabase):
         return {
             "validate": False
         }
+    
+    # Маршрут для отзыва токена (выход)
+    @router.delete("/out")
+    async def out_token(request: UseOnlyTokenRequest):
+        if not is_existing_token(request):
+            raise HTTPException(status_code=404, detail="Token not found")
+        
+        try:
+            supabase.table("personal_access_tokens") \
+                .delete() \
+                .eq("token", hash_token(request.token)) \
+                .execute()
+            return {"out_token": "success"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+        
+    # Маршрут для получения меню
+    @router.get("/fetch_menu")
+    async def fetch_menu():
+        try:
+            response = supabase.table("menu") \
+                .select("*") \
+                .execute()
+        
+            menu_items = response.data
+        
+            if not menu_items:
+                raise HTTPException(status_code=404, detail="Меню отсутствует")
+            
+            return {
+                "status": "success",
+                "menu": menu_items
+            }
+        
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка получения меню: {str(e)}"
+            )
+
 
     return router
 
