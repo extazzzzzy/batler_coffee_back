@@ -181,21 +181,21 @@ def create_router(supabase):
             raise HTTPException(status_code=500, detail=str(e))
         
     # Маршрут для получения меню
-    @router.get("/fetch_menu")
-    async def fetch_menu():
+    @router.get("/fetch_products")
+    async def fetch_products():
         try:
-            response = supabase.table("menu") \
+            response = supabase.table("products") \
                 .select("*") \
                 .execute()
         
-            menu_items = response.data
+            products_items = response.data
         
-            if not menu_items:
+            if not products_items:
                 raise HTTPException(status_code=404, detail="Меню отсутствует")
             
             return {
                 "status": "success",
-                "menu": menu_items
+                "products": products_items
             }
         
         except Exception as e:
