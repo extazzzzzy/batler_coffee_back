@@ -180,28 +180,47 @@ def create_router(supabase):
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
         
-    # Маршрут для получения меню
+    # Маршрут для получения меню (с ингредиентами)
     @router.get("/fetch_products")
     async def fetch_products():
         try:
-            response = supabase.table("products") \
-                .select("*") \
+        # Получаем все продукты
+            products_response = supabase.table("products").select("*").execute()
+            products = products_response.data
+
+            if not products:
+                raise HTTPException(status_code=404, detail="Продукты отсутствуют")
+
+            links_response = supabase.table("products_to_ingredients") \
+                .select("product_id, ingredients!inner(id, name, price)") \
                 .execute()
-        
-            products_items = response.data
-        
-            if not products_items:
-                raise HTTPException(status_code=404, detail="Меню отсутствует")
+            
+            links = links_response.data
+
+            ingredients_by_product = {}
+            for link in links:
+                product_id = link["product_id"]
+                if product_id not in ingredients_by_product:
+                    ingredients_by_product[product_id] = []
+                ingredients_by_product[product_id].append(link["ingredients"])
+
+            result = []
+            for product in products:
+                product_with_ingredients = {
+                    **product,
+                    "ingredients": ingredients_by_product.get(product["id"], [])
+                }
+                result.append(product_with_ingredients)
             
             return {
                 "status": "success",
-                "products": products_items
+                "products": result
             }
         
         except Exception as e:
             raise HTTPException(
                 status_code=500,
-                detail=f"Ошибка получения меню: {str(e)}"
+                detail=f"Ошибка получения продуктов: {str(e)}"
             )
 
 
