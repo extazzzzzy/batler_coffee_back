@@ -305,10 +305,11 @@ def create_router(supabase):
                 return {
                     "status": "success",
                     "message": "Промокод активен",
-                    "new_sum": new_sum
+                    "new_sum": int(new_sum)
                 }
             
             raise HTTPException(status_code=404, detail="Выполнены не все условия акции") 
+        
         except Exception as e:
             raise HTTPException(
                 status_code=500,
