@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException, status
-from app.models import VerifyRequest, AuthRequest, UserDataRequest, UseOnlyTokenRequest
+from app.models import VerifyRequest, AuthRequest, UserDataRequest, UseOnlyTokenRequest, CreateOrderRequest, CheckPromocodeRequest
 import bcrypt
 import os
 from jose import jwt
 from dotenv import load_dotenv
 from hashlib import sha256
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -184,7 +185,6 @@ def create_router(supabase):
     @router.get("/fetch_products")
     async def fetch_products():
         try:
-        # Получаем все продукты
             products_response = supabase.table("products").select("*").execute()
             products = products_response.data
 
@@ -221,6 +221,98 @@ def create_router(supabase):
             raise HTTPException(
                 status_code=500,
                 detail=f"Ошибка получения продуктов: {str(e)}"
+            )
+        
+    # Маршрут для создания нового заказа
+    @router.post("/create_order")
+    async def create_order(request: CreateOrderRequest):
+        if not is_existing_token(request):
+            raise HTTPException(status_code=404, detail="Token not found")
+        try:
+            user_id = (supabase.table("personal_access_tokens") \
+                .select("user_id") \
+                .eq("token", hash_token(request.token)) \
+                .execute()).data[0]['user_id']
+            supabase.table("orders").insert({
+                "user_id": user_id,
+                "ready_for": request.ready_for,
+                "description": request.description,
+                "total_sum": request.total_sum,
+            }).execute()
+            return {
+                "status": "success"
+            }
+        
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка создания заказа: {str(e)}"
+            )
+    
+    # Маршрут для проверки валидности промокода
+    @router.post("/check_promocode")
+    async def check_promocode(request: CheckPromocodeRequest):
+        if not is_existing_token(request):
+            raise HTTPException(status_code=404, detail="Токен не найден")
+        try:
+            response = (supabase.table("promocodes") \
+                .select("*") \
+                .eq("promocode", request.promocode) \
+                .execute())
+            if not response.data:
+                raise HTTPException(status_code=404, detail="Промокод не найден")
+            
+            is_active_promocode = response.data[0]['is_active']
+            if is_active_promocode == False:
+                raise HTTPException(status_code=404, detail="Промокод неактивен")
+            
+            user_id = (supabase.table("personal_access_tokens") \
+                .select("user_id") \
+                .eq("token", hash_token(request.token)) \
+                .execute()).data[0]['user_id']
+            birthday_user = (supabase.table("users") \
+                .select("birthday") \
+                .eq("id", user_id) \
+                .execute()).data[0]['birthday']
+
+            # Проверка на промокод ДР, что он действителен только 3 дня ДО и 3 дня ПОСЛЕ
+            if request.promocode == "ДР":
+                today = datetime.now().date()
+
+                birthday_str = birthday_user
+                day, month, year = map(int, birthday_str.split('.'))
+                birthday = datetime(year=datetime.now().year, month=month, day=day).date()
+
+                if birthday < today:
+                    birthday = datetime(year=datetime.now().year + 1, month=month, day=day).date()
+
+                start_date = birthday - timedelta(days=3)
+                end_date = birthday + timedelta(days=3)
+
+                if (start_date <= today <= end_date) == False:
+                    raise HTTPException(status_code=404, detail="Промокод неактивен для данного пользователя")
+
+            discount = int(response.data[0]['discount'])
+            min_total_sum = int(response.data[0]['min_total_sum'])
+            is_percent = response.data[0]['is_percent']
+            total_sum = int(request.total_sum)
+            
+            if (total_sum >= min_total_sum):
+                if is_percent:
+                    new_sum = total_sum * (1 - discount / 100)
+                else:
+                    new_sum = total_sum - discount
+                return {
+                    "status": "success",
+                    "message": "Промокод активен",
+                    "new_sum": new_sum
+                }
+            
+            raise HTTPException(status_code=404, detail="Выполнены не все условия акции") 
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка проверки промокода: {str(e)}"
             )
 
 

@@ -16,3 +16,14 @@ class UserDataRequest(BaseModel):
 
 class UseOnlyTokenRequest(BaseModel):
     token: str
+
+class CreateOrderRequest(BaseModel):
+    token: str
+    ready_for: str
+    description: str
+    total_sum: str
+
+class CheckPromocodeRequest(BaseModel):
+    token: str
+    promocode: str
+    total_sum: str
