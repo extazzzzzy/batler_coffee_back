@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
-from app.models import VerifyRequest, AuthRequest, UserDataRequest, UseOnlyTokenRequest, CreateOrderRequest, CheckPromocodeRequest
+from app.models import VerifyRequest, AuthRequest, UserDataRequest, UseOnlyTokenRequest, CreateOrderRequest, CheckPromocodeRequest, CheckValidateTokenRequest
 import bcrypt
 import os
 from jose import jwt
@@ -24,6 +24,7 @@ def create_router(supabase):
         response = supabase.table("personal_access_tokens") \
             .select("id") \
             .eq("token", str(sha256(request.token.encode('utf-8')).hexdigest())) \
+            .eq("created_at", request.created_at) \
             .execute()
         if not response.data:
             return False
@@ -91,17 +92,25 @@ def create_router(supabase):
         
         # Создаём токен и заносим в БД
         token = create_jwt_token(user_id)
+
         supabase.table("personal_access_tokens") \
-            .upsert({
-                "user_id": user_id,
-                "token": hash_token(token)
-            }, on_conflict="user_id") \
+            .delete() \
+            .eq("user_id", user_id) \
             .execute()
+        supabase.table("personal_access_tokens").insert({
+            "user_id": user_id,
+            "token": hash_token(token),
+        }).execute()
+        created_at_token = str(supabase.table("personal_access_tokens") \
+            .select("created_at") \
+            .eq("token", hash_token(token)) \
+            .execute().data[0]['created_at'])
         
         return {
             "access_token": token,
             "user_id": user_id,
-            "is_new_user": is_new
+            "is_new_user": is_new,
+            "created_at_token": created_at_token,
         }
     
     # Маршрут для изменения пользовательских данных
@@ -157,7 +166,7 @@ def create_router(supabase):
         }
     # Маршрут для получения информации о действительности токена
     @router.post("/check_validate_token")
-    async def check_validate_token(request: UseOnlyTokenRequest):
+    async def check_validate_token(request: CheckValidateTokenRequest):
         if (is_existing_token(request)):
             return {
                 "validate": True

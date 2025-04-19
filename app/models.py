@@ -17,6 +17,10 @@ class UserDataRequest(BaseModel):
 class UseOnlyTokenRequest(BaseModel):
     token: str
 
+class CheckValidateTokenRequest(BaseModel):
+    token: str
+    created_at: str
+
 class CreateOrderRequest(BaseModel):
     token: str
     ready_for: str
