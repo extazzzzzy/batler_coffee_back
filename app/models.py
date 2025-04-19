@@ -11,23 +11,23 @@ class AuthRequest(BaseModel):
 
 class UserDataRequest(BaseModel):
     token: str
+    created_at_token: str
     name: str
     birthday: str
 
 class UseOnlyTokenRequest(BaseModel):
     token: str
-
-class CheckValidateTokenRequest(BaseModel):
-    token: str
-    created_at: str
+    created_at_token: str
 
 class CreateOrderRequest(BaseModel):
     token: str
+    created_at_token: str
     ready_for: str
     description: str
     total_sum: str
 
 class CheckPromocodeRequest(BaseModel):
     token: str
+    created_at_token: str
     promocode: str
     total_sum: str

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
-from app.models import VerifyRequest, AuthRequest, UserDataRequest, UseOnlyTokenRequest, CreateOrderRequest, CheckPromocodeRequest, CheckValidateTokenRequest
+from app.models import VerifyRequest, AuthRequest, UserDataRequest, UseOnlyTokenRequest, CreateOrderRequest, CheckPromocodeRequest
 import bcrypt
 import os
 from jose import jwt
@@ -24,7 +24,7 @@ def create_router(supabase):
         response = supabase.table("personal_access_tokens") \
             .select("id") \
             .eq("token", str(sha256(request.token.encode('utf-8')).hexdigest())) \
-            .eq("created_at", request.created_at) \
+            .eq("created_at", request.created_at_token) \
             .execute()
         if not response.data:
             return False
@@ -166,7 +166,7 @@ def create_router(supabase):
         }
     # Маршрут для получения информации о действительности токена
     @router.post("/check_validate_token")
-    async def check_validate_token(request: CheckValidateTokenRequest):
+    async def check_validate_token(request: UseOnlyTokenRequest):
         if (is_existing_token(request)):
             return {
                 "validate": True
@@ -179,7 +179,9 @@ def create_router(supabase):
     @router.delete("/out")
     async def out_token(request: UseOnlyTokenRequest):
         if not is_existing_token(request):
-            raise HTTPException(status_code=404, detail="Token not found")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
         
         try:
             supabase.table("personal_access_tokens") \
@@ -236,7 +238,9 @@ def create_router(supabase):
     @router.post("/create_order")
     async def create_order(request: CreateOrderRequest):
         if not is_existing_token(request):
-            raise HTTPException(status_code=404, detail="Token not found")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
         try:
             user_id = (supabase.table("personal_access_tokens") \
                 .select("user_id") \
@@ -262,7 +266,9 @@ def create_router(supabase):
     @router.post("/check_promocode")
     async def check_promocode(request: CheckPromocodeRequest):
         if not is_existing_token(request):
-            raise HTTPException(status_code=404, detail="Токен не найден")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
         try:
             response = (supabase.table("promocodes") \
                 .select("*") \
