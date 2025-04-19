@@ -5,6 +5,7 @@ import uvicorn
 from app.dependencies import supabase
 import os
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
 
@@ -12,7 +13,7 @@ app = FastAPI()
 
 # Подключаем роутер
 app.include_router(create_router(supabase))
-
+app.mount("/img", StaticFiles(directory="app/src/img"), name="images")
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
 app.add_middleware(
     CORSMiddleware,
