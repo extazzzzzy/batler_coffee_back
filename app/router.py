@@ -331,6 +331,76 @@ def create_router(supabase):
                 detail=f"Ошибка проверки промокода: {str(e)}"
             )
 
+    # Маршрут для получения заказов пользователя
+    @router.post("/fetch_user_orders")
+    async def fetch_user_orders(request: UseOnlyTokenRequest):
+        if not is_existing_token(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        user_id = (supabase.table("personal_access_tokens") \
+            .select("user_id") \
+            .eq("token", hash_token(request.token)) \
+            .execute()).data[0]['user_id']
+        try:
+            orders_response = supabase.table("orders") \
+                .select("*") \
+                .eq("user_id", user_id) \
+                .order("created_at", desc=True) \
+                .execute()
+            orders = orders_response.data
+            formatted_orders = []
+            for order in orders:
+                formatted_orders.append({
+                    "order_id": order["id"],
+                    "created_at": order["created_at"],
+                    "ready_for": order["ready_for"],
+                    "description": order["description"],
+                    "total_sum": order["total_sum"],
+                    "status": order["status"]
+                })
+            
+            return {
+                "success": True,
+                "orders": formatted_orders,
+                "count": len(orders)
+            }
+            
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Ошибка при получении заказов: {str(e)}"
+            )
+    # Маршрут для получения акций (промокодов)
+    @router.get("/fetch_promocodes")
+    async def fetch_promocodes():
+        try:
+            promocodes_response = supabase.table("promocodes") \
+                .select("*") \
+                .order("created_at", desc=True) \
+                .execute()
+            promocodes = promocodes_response.data
+            formatted_promocodes = []
+            for promocode in promocodes:
+                if promocode['is_active'] == True:
+                    formatted_promocodes.append({
+                        "promocode_id": promocode["id"],
+                        "promocode": promocode["promocode"],
+                        "description": promocode["description"],
+                        "src_img": promocode["src_img"],
+                    })
+            
+            return {
+                "success": True,
+                "orders": formatted_promocodes,
+            }
+            
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Ошибка при получении заказов: {str(e)}"
+            )
+
 
     return router
 
