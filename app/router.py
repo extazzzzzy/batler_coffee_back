@@ -1,13 +1,17 @@
 from fastapi import APIRouter, HTTPException, status
+
 from app.models import VerifyRequest, AuthRequest, UserDataRequest, UseOnlyTokenRequest, \
-      CreateOrderRequest, CheckPromocodeRequest, SignUpNewAdmin, SignInAdmin
-import bcrypt
+      CreateOrderRequest, CheckPromocodeRequest, SignUpNewAdmin, SignInAdmin, EditProductsIngredients, \
+      DeleteProduct, CreateProduct
+
 import os
 from jose import jwt
 from dotenv import load_dotenv
 from hashlib import sha256
 from datetime import datetime, timedelta
 from passlib.hash import bcrypt
+import base64
+import uuid
 
 load_dotenv()
 
@@ -30,6 +34,28 @@ def create_router(supabase):
             .execute()
         if not response.data:
             return False
+        return True
+    
+    def is_existing_token_admin(request):
+        response = supabase.table("personal_access_tokens") \
+            .select("id") \
+            .eq("token", str(sha256(request.token.encode('utf-8')).hexdigest())) \
+            .eq("created_at", request.created_at_token) \
+            .execute()
+        if not response.data:
+            return False
+        
+        user_id = (supabase.table("personal_access_tokens") \
+            .select("user_id") \
+            .eq("token", hash_token(request.token)) \
+            .execute()).data[0]['user_id']
+        role = (supabase.table("users") \
+            .select("role") \
+            .eq("id", user_id) \
+            .execute()).data[0]['role']
+        if role != 1:
+            return False
+        
         return True
     
     def hash_token(token):
@@ -66,7 +92,7 @@ def create_router(supabase):
             .select("code") \
             .eq("phone_number", request.phone_number) \
             .execute().data[0]['code'])[2:-1].encode('utf-8')
-        if not bcrypt.checkpw(input_code, verify_code): 
+        if not bcrypt.verify(input_code.decode(), verify_code.decode()): 
             return {"error": "false_code"}
         
         # Удаляем код после входа
@@ -407,10 +433,14 @@ def create_router(supabase):
     # Маршрут для регистрации нового администратора
     @router.post("/signup_admin")
     async def signup_admin(request: SignUpNewAdmin):
-        # НЕ ЗАБЫТЬ ПОТОМ ДОБАВИТЬ ПРОВЕРКУ ТОКЕНА И РОЛИ!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        if not is_existing_token_admin(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+
         hashed_secretkey = bcrypt.hash(request.secret_key)
         try:
-            supabase.table("users").upsert({
+            supabase.table("users").insert({
                 "phone_number": request.login,
                 "secret_key": hashed_secretkey,
                 "name": request.name,
@@ -447,6 +477,9 @@ def create_router(supabase):
         if not bcrypt.verify(request.secret_key, stored_hash):
             raise HTTPException(401, "Неверный пароль")
         
+        if user_data['role'] != 1:
+            raise HTTPException(401, "Недостаточно прав")
+        
         # Создаём токен и заносим в БД
         token = create_jwt_token(user_id)
 
@@ -467,6 +500,104 @@ def create_router(supabase):
             "access_token": token,
             "created_at_token": created_at_token,
         }
+    
+    # Маршрут для создания/удаления ингредиентов у продукта
+    @router.post("/edit_products_ingredients")
+    async def edit_products_ingredients(request: EditProductsIngredients):
+        if not is_existing_token_admin(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        try:
+            if request.type_edit == "create":
+                supabase.table("products_to_ingredients").insert({
+                    "product_id": request.product_id,
+                    "ingredient_id": request.ingredient_id,
+                }).execute()
+                return {
+                    "message": "Ингредиент успешно добавлен"
+                }
+
+            elif request.type_edit == "delete":
+                supabase.table("products_to_ingredients") \
+                    .delete() \
+                    .eq("product_id", request.product_id) \
+                    .eq("ingredient_id", request.ingredient_id) \
+                .execute()
+                return {
+                    "message": "Ингредиент успешно удалён"
+                }
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка редактирования: {str(e)}"
+            )
+
+    # Маршрут для удаления продукта
+    @router.post("/delete_product")
+    async def delete_product(request: DeleteProduct):
+        if not is_existing_token_admin(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        try:
+            supabase.table("products") \
+                .delete() \
+                .eq("id", request.product_id) \
+            .execute()
+            return {
+                "message": "Продукт успешно удалён"
+            }
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка удаления: {str(e)}"
+            )
+    
+    # Маршрут для создания продукта
+    @router.post("/create_product")
+    async def create_product(request: CreateProduct):
+        if not is_existing_token_admin(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        try:
+            # ОБРАБОТКА ИЗОБРАЖЕНИЯ ИЗ BASE64
+            base64_img = request.base64_img
+            if ',' in base64_img:
+                base64_img = base64_img.split(',')[1]
+            img_data = base64.b64decode(base64_img)
+            filename = f"{uuid.uuid4()}.jpg"
+            filepath = os.path.join("app/src/img/menu/", filename)
+            with open(filepath, "wb") as f:
+                f.write(img_data)
+            src_img = os.getenv("PATH_IMG") + "menu/" + filename
+
+            supabase.table("products").insert({
+                    "name": request.name,
+                    "description": request.description,
+                    "composition": request.composition,
+                    "price": request.price,
+                    "src_img": src_img,
+                    "protein": request.protein,
+                    "fats": request.fats,
+                    "carbohydrates": request.carbohydrates,
+                    "weight": request.weight,
+                    "kilocalories": request.kilocalories
+            }).execute()
+
+            return {
+                "message": "Продукт успешно создан"
+            }
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка создания: {str(e)}"
+            )  
+
     return router
 
     

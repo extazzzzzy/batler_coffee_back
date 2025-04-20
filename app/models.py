@@ -34,6 +34,8 @@ class CheckPromocodeRequest(BaseModel):
 
 # ТОЛЬКО АДМИНСКИЕ МОДЕЛИ ⬇️⬇️⬇️
 class SignUpNewAdmin(BaseModel):
+    token: str
+    created_at_token: str
     login: str
     secret_key: str
     name: str
@@ -41,3 +43,29 @@ class SignUpNewAdmin(BaseModel):
 class SignInAdmin(BaseModel):
     login: str
     secret_key: str
+
+class EditProductsIngredients(BaseModel):
+    token: str
+    created_at_token: str
+    product_id: int
+    ingredient_id: int
+    type_edit: str # create/delete
+
+class DeleteProduct(BaseModel):
+    token: str
+    created_at_token: str
+    product_id: int
+
+class CreateProduct(BaseModel):
+    token: str
+    created_at_token: str
+    name: str
+    description: str
+    composition: str
+    price: str
+    base64_img: str
+    protein: str
+    fats: str
+    carbohydrates: str
+    weight: str
+    kilocalories: str
