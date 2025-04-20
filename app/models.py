@@ -31,3 +31,13 @@ class CheckPromocodeRequest(BaseModel):
     created_at_token: str
     promocode: str
     total_sum: str
+
+# ТОЛЬКО АДМИНСКИЕ МОДЕЛИ ⬇️⬇️⬇️
+class SignUpNewAdmin(BaseModel):
+    login: str
+    secret_key: str
+    name: str
+
+class SignInAdmin(BaseModel):
+    login: str
+    secret_key: str

@@ -1,11 +1,13 @@
 from fastapi import APIRouter, HTTPException, status
-from app.models import VerifyRequest, AuthRequest, UserDataRequest, UseOnlyTokenRequest, CreateOrderRequest, CheckPromocodeRequest
+from app.models import VerifyRequest, AuthRequest, UserDataRequest, UseOnlyTokenRequest, \
+      CreateOrderRequest, CheckPromocodeRequest, SignUpNewAdmin, SignInAdmin
 import bcrypt
 import os
 from jose import jwt
 from dotenv import load_dotenv
 from hashlib import sha256
 from datetime import datetime, timedelta
+from passlib.hash import bcrypt
 
 load_dotenv()
 
@@ -400,8 +402,71 @@ def create_router(supabase):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Ошибка при получении заказов: {str(e)}"
             )
+    
+    # ТОЛЬКО АДМИНСКИЕ МАРШРУТЫ ⬇️⬇️⬇️
+    # Маршрут для регистрации нового администратора
+    @router.post("/signup_admin")
+    async def signup_admin(request: SignUpNewAdmin):
+        # НЕ ЗАБЫТЬ ПОТОМ ДОБАВИТЬ ПРОВЕРКУ ТОКЕНА И РОЛИ!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        hashed_secretkey = bcrypt.hash(request.secret_key)
+        try:
+            supabase.table("users").upsert({
+                "phone_number": request.login,
+                "secret_key": hashed_secretkey,
+                "name": request.name,
+                "role": 1,
+            }).execute()
+            return {
+                "status": "success",
+                "message": "Администратор создан",
+            }
 
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка регистрации: {str(e)}"
+            )
+        
+    # Маршрут для авторизации администратора
+    @router.post("/signin_admin")
+    async def signin_admin(request: SignInAdmin):
+        user_response = (supabase.table("users") \
+            .select("*") \
+            .eq("phone_number", request.login) \
+            .execute())
+        if not user_response.data:
+            raise HTTPException(
+                status_code=404,
+                detail="Администратора с таким логином не существует"
+            )
+        
+        user_data = user_response.data[0]
+        user_id = user_data['id']
+        stored_hash = user_data['secret_key']
 
+        if not bcrypt.verify(request.secret_key, stored_hash):
+            raise HTTPException(401, "Неверный пароль")
+        
+        # Создаём токен и заносим в БД
+        token = create_jwt_token(user_id)
+
+        supabase.table("personal_access_tokens") \
+            .delete() \
+            .eq("user_id", user_id) \
+            .execute()
+        supabase.table("personal_access_tokens").insert({
+            "user_id": user_id,
+            "token": hash_token(token),
+        }).execute()
+        created_at_token = str(supabase.table("personal_access_tokens") \
+            .select("created_at") \
+            .eq("token", hash_token(token)) \
+            .execute().data[0]['created_at'])
+        
+        return {
+            "access_token": token,
+            "created_at_token": created_at_token,
+        }
     return router
 
     
