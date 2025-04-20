@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from passlib.hash import bcrypt
 import base64
 import uuid
+from urllib.parse import urlparse
 
 load_dotenv()
 
@@ -542,14 +543,43 @@ def create_router(supabase):
                 status_code=status.HTTP_401_UNAUTHORIZED,
             )
         try:
+            product = supabase.table("products") \
+                .select("src_img") \
+                .eq("id", request.product_id) \
+                .execute()
+            if not product.data:
+                raise HTTPException(status_code=404, detail="Продукт не найден")
+            src_img = product.data[0]['src_img']
+
+            try:
+                supabase.table("products_to_ingredients") \
+                    .delete() \
+                    .eq("product_id", request.product_id) \
+                    .execute()
+            except Exception as links_error:
+                print(f"Ошибка удаления связей с ингредиентами: {str(links_error)}")
+
             supabase.table("products") \
                 .delete() \
                 .eq("id", request.product_id) \
-            .execute()
+                .execute()
+            
+            try:
+                filename = os.path.basename(src_img)
+                print(filename)
+                full_path = os.path.join("app/src/img/menu/", filename)
+                if os.path.exists(full_path):
+                    os.remove(full_path)
+            except Exception as img_error:
+                print(f"Ошибка удаления изображения: {str(img_error)}")
+            
             return {
-                "message": "Продукт успешно удалён"
+                "message": "Продукт успешно удалён",
+                "deleted_image": bool(src_img)
             }
 
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(
                 status_code=500,
