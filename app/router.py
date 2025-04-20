@@ -573,7 +573,7 @@ def create_router(supabase):
             filepath = os.path.join("app/src/img/menu/", filename)
             with open(filepath, "wb") as f:
                 f.write(img_data)
-            src_img = os.getenv("PATH_IMG") + "menu/" + filename
+            src_img = str(os.getenv("PATH_IMG")) + "menu/" + str(filename)
 
             supabase.table("products").insert({
                     "name": request.name,
