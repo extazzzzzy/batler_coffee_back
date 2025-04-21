@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, status
 from app.models import VerifyRequest, AuthRequest, UserDataRequest, UseOnlyTokenRequest, \
       CreateOrderRequest, CheckPromocodeRequest, SignUpNewAdmin, SignInAdmin, EditProductsIngredients, \
       DeleteProduct, CreateProduct, UpdateProduct, DeleteIngredient, CreateIngredient, UpdateIngredient, \
-      DeletePromocode, CreatePromocode, UpdatePromocode, UpdateOrder
+      DeletePromocode, CreatePromocode, UpdatePromocode, UpdateOrder, DeleteAdministrator
 
 import os
 from jose import jwt
@@ -1055,6 +1055,70 @@ def create_router(supabase):
             raise HTTPException(
                 status_code=500,
                 detail=f"Ошибка обновления: {str(e)}"
+            )
+
+    # Маршрут для получения всех администраторов
+    @router.post("/fetch_administrators")
+    async def fetch_administrators(request: UseOnlyTokenRequest):
+        if not is_existing_token_admin(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        try:
+            administrators_response = supabase.table("users") \
+                .select("*") \
+                .eq("role", 1) \
+                .execute()
+            administrators = administrators_response.data
+
+            formatted_administrators = []
+            for administrator in administrators:
+                formatted_administrators.append({
+                    "name": administrator["name"],
+                    "login": administrator["phone_number"],
+                })
+            
+            return {
+                "success": True,
+                "administrators": formatted_administrators,
+            }
+            
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Ошибка при получении заказов: {str(e)}"
+            )
+    # Маршрут для удаления админа
+    @router.delete("/delete_administrator")
+    async def delete_administrator(request: DeleteAdministrator):
+        if not is_existing_token_admin(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        try:
+            try:
+                supabase.table("personal_access_tokens") \
+                    .delete() \
+                    .eq("user_id", request.user_id) \
+                    .execute()
+            except Exception as links_error:
+                print(f"Ошибка удаления токенов администратора: {str(links_error)}")
+
+            supabase.table("users") \
+                .delete() \
+                .eq("id", request.user_id) \
+                .execute()
+            
+            return {
+                "message": "Администратор успешно удалён",
+            }
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка удаления: {str(e)}"
             )
 
     return router
