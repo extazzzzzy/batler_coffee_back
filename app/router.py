@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.models import VerifyRequest, AuthRequest, UserDataRequest, UseOnlyTokenRequest, \
       CreateOrderRequest, CheckPromocodeRequest, SignUpNewAdmin, SignInAdmin, EditProductsIngredients, \
-      DeleteProduct, CreateProduct
+      DeleteProduct, CreateProduct, UpdateProduct
 
 import os
 from jose import jwt
@@ -566,7 +566,6 @@ def create_router(supabase):
             
             try:
                 filename = os.path.basename(src_img)
-                print(filename)
                 full_path = os.path.join("app/src/img/menu/", filename)
                 if os.path.exists(full_path):
                     os.remove(full_path)
@@ -626,7 +625,79 @@ def create_router(supabase):
             raise HTTPException(
                 status_code=500,
                 detail=f"Ошибка создания: {str(e)}"
-            )  
+            )
+    
+    # Маршрут для обновления данных о продукте
+    @router.post("/update_product")
+    async def update_product(request: UpdateProduct):
+        if not is_existing_token_admin(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        
+        try:
+            update_data = {}
+            
+            if request.name is not None:
+                update_data["name"] = request.name
+            if request.description is not None:
+                update_data["description"] = request.description
+            if request.composition is not None:
+                update_data["composition"] = request.composition
+            if request.price is not None:
+                update_data["price"] = request.price
+            if request.protein is not None:
+                update_data["protein"] = request.protein
+            if request.fats is not None:
+                update_data["fats"] = request.fats
+            if request.carbohydrates is not None:
+                update_data["carbohydrates"] = request.carbohydrates
+            if request.weight is not None:
+                update_data["weight"] = request.weight
+            if request.kilocalories is not None:
+                update_data["kilocalories"] = request.kilocalories
+            
+            if request.base64_img is not None:
+                # удаление старого изображения с сервера
+                product = supabase.table("products") \
+                    .select("src_img") \
+                    .eq("id", request.product_id) \
+                    .execute()
+                src_img = product.data[0]['src_img']
+
+                try:
+                    filename = os.path.basename(src_img)
+                    full_path = os.path.join("app/src/img/menu/", filename)
+                    if os.path.exists(full_path):
+                        os.remove(full_path)
+                except Exception as img_error:
+                    print(f"Ошибка удаления изображения: {str(img_error)}")
+                
+                # создание нового изображения
+                base64_img = request.base64_img
+                if ',' in base64_img:
+                    base64_img = base64_img.split(',')[1]
+                img_data = base64.b64decode(base64_img)
+                filename = f"{uuid.uuid4()}.jpg"
+                filepath = os.path.join("app/src/img/menu/", filename)
+                with open(filepath, "wb") as f:
+                    f.write(img_data)
+                src_img = str(os.getenv("PATH_IMG")) + "menu/" + str(filename)
+                update_data["src_img"] = src_img
+            
+            # Обновляем только если есть что обновлять
+            if update_data:
+                supabase.table("products").update(update_data).eq("id", request.product_id).execute()
+            
+            return {
+                "message": "Продукт успешно обновлен"
+            }
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка обновления: {str(e)}"
+            )
 
     return router
 

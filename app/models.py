@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 # Модель для входящих данных при авторизации (для таблицы verify_codes)
 class VerifyRequest(BaseModel):
@@ -69,3 +70,18 @@ class CreateProduct(BaseModel):
     carbohydrates: str
     weight: str
     kilocalories: str
+
+class UpdateProduct(BaseModel):
+    token: str
+    created_at_token: str
+    product_id: int
+    name: Optional[str] = None
+    description: Optional[str] = None
+    composition: Optional[str] = None
+    price: Optional[str] = None
+    base64_img: Optional[str] = None
+    protein: Optional[str] = None
+    fats: Optional[str] = None
+    carbohydrates: Optional[str] = None
+    weight: Optional[str] = None
+    kilocalories: Optional[str] = None
