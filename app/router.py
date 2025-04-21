@@ -889,8 +889,8 @@ def create_router(supabase):
         try:
             update_data = {}
             
-            if request.name is not None:
-                update_data["name"] = request.name
+            if request.promocode is not None:
+                update_data["promocode"] = request.promocode
             if request.description is not None:
                 update_data["description"] = request.description
             if request.is_active is not None:
