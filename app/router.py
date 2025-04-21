@@ -698,6 +698,33 @@ def create_router(supabase):
                 status_code=500,
                 detail=f"Ошибка обновления: {str(e)}"
             )
+        
+    # Маршрут для получения всех ингредиентов
+    @router.get("/fetch_ingredients")
+    async def fetch_ingredients():
+        try:
+            ingredients_response = supabase.table("ingredients") \
+                .select("*") \
+                .execute()
+            ingredients = ingredients_response.data
+            formatted_ingredients = []
+            for ingredient in ingredients:
+                formatted_ingredients.append({
+                    "id": ingredient["id"],
+                    "name": ingredient["name"],
+                    "price": ingredient["price"],
+                })
+            
+            return {
+                "success": True,
+                "ingredients": formatted_ingredients,
+            }
+            
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Ошибка при получении ингредиентов: {str(e)}"
+            )
 
     return router
 
