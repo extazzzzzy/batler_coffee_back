@@ -134,3 +134,12 @@ class UpdateIngredient(BaseModel):
     ingredient_id: int
     name: Optional[str] = None
     price: Optional[str] = None
+
+class UpdateOrder(BaseModel):
+    token: str
+    created_at_token: str
+    order_id: int
+    ready_for: Optional[str] = None
+    description: Optional[str] = None
+    total_sum: Optional[str] = None
+    status: Optional[str] = None

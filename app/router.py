@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, status
 from app.models import VerifyRequest, AuthRequest, UserDataRequest, UseOnlyTokenRequest, \
       CreateOrderRequest, CheckPromocodeRequest, SignUpNewAdmin, SignInAdmin, EditProductsIngredients, \
       DeleteProduct, CreateProduct, UpdateProduct, DeleteIngredient, CreateIngredient, UpdateIngredient, \
-      DeletePromocode, CreatePromocode, UpdatePromocode
+      DeletePromocode, CreatePromocode, UpdatePromocode, UpdateOrder
 
 import os
 from jose import jwt
@@ -975,6 +975,86 @@ def create_router(supabase):
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Ошибка при получении заказов: {str(e)}"
+            )
+    
+    # Маршрут для получения всех заказов
+    @router.post("/fetch_orders")
+    async def fetch_orders(request: UseOnlyTokenRequest):
+        if not is_existing_token_admin(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        try:
+            orders_response = supabase.table("orders") \
+                .select("*") \
+                .order("created_at", desc=True) \
+                .execute()
+            orders = orders_response.data
+
+            user_ids = list({order["user_id"] for order in orders if order.get("user_id")})
+        
+            users_response = supabase.table("users") \
+                .select("id, name, phone_number") \
+                .in_("id", user_ids) \
+                .execute()
+            users = {user["id"]: user for user in users_response.data}
+
+            formatted_orders = []
+            for order in orders:
+                user_data = users.get(order["user_id"], {})
+                formatted_orders.append({
+                    "order_id": order["id"],
+                    "created_at": order["created_at"],
+                    "ready_for": order["ready_for"],
+                    "description": order["description"],
+                    "total_sum": order["total_sum"],
+                    "status": order["status"],
+                    "user_name": user_data.get("name", "Неизвестно"),
+                    "user_phone": user_data.get("phone_number", "Не указан")
+                })
+            
+            return {
+                "success": True,
+                "orders": formatted_orders,
+            }
+            
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Ошибка при получении заказов: {str(e)}"
+            )
+    
+    # Маршрут для обновления данных о заказе
+    @router.post("/update_order")
+    async def update_order(request: UpdateOrder):
+        if not is_existing_token_admin(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        
+        try:
+            update_data = {}
+            
+            if request.ready_for is not None:
+                update_data["ready_for"] = request.ready_for
+            if request.description is not None:
+                update_data["description"] = request.description
+            if request.total_sum is not None:
+                update_data["total_sum"] = request.total_sum
+            if request.status is not None:
+                update_data["status"] = request.status
+            
+            if update_data:
+                supabase.table("orders").update(update_data).eq("id", request.order_id).execute()
+            
+            return {
+                "message": "Данные заказа успешно обновлены"
+            }
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка обновления: {str(e)}"
             )
 
     return router
