@@ -961,6 +961,9 @@ def create_router(supabase):
                     "description": promocode["description"],
                     "src_img": promocode["src_img"],
                     "is_acitve": promocode["is_active"],
+                    "is_percent": promocode["is_percent"],
+                    "min_total_sum": promocode["min_total_sum"],
+                    "discount": promocode["discount"],
                 })
             
             return {
