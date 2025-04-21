@@ -943,6 +943,36 @@ def create_router(supabase):
                 status_code=500,
                 detail=f"Ошибка обновления: {str(e)}"
             )
+    
+    # Маршрут для получения акций (промокодов) админский
+    @router.get("/fetch_promocodes_admin")
+    async def fetch_promocodes_admin():
+        try:
+            promocodes_response = supabase.table("promocodes") \
+                .select("*") \
+                .order("created_at", desc=True) \
+                .execute()
+            promocodes = promocodes_response.data
+            formatted_promocodes = []
+            for promocode in promocodes:
+                formatted_promocodes.append({
+                    "promocode_id": promocode["id"],
+                    "promocode": promocode["promocode"],
+                    "description": promocode["description"],
+                    "src_img": promocode["src_img"],
+                    "is_acitve": promocode["is_active"],
+                })
+            
+            return {
+                "success": True,
+                "promocodes": formatted_promocodes,
+            }
+            
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Ошибка при получении заказов: {str(e)}"
+            )
 
     return router
 
