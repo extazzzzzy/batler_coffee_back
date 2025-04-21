@@ -143,3 +143,8 @@ class UpdateOrder(BaseModel):
     description: Optional[str] = None
     total_sum: Optional[str] = None
     status: Optional[str] = None
+
+class DeleteAdministrator(BaseModel):
+    token: str
+    created_at_token: str
+    user_id: int
