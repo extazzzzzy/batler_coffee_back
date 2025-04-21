@@ -68,6 +68,7 @@ class CreateProduct(BaseModel):
     name: str
     description: str
     composition: str
+    is_available: str
     price: str
     base64_img: str
     protein: str
@@ -89,6 +90,7 @@ class UpdateProduct(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     composition: Optional[str] = None
+    is_available: Optional[str] = None
     price: Optional[str] = None
     base64_img: Optional[str] = None
     protein: Optional[str] = None

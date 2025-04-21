@@ -608,6 +608,7 @@ def create_router(supabase):
                     "name": request.name,
                     "description": request.description,
                     "composition": request.composition,
+                    "is_available": request.is_available,
                     "price": request.price,
                     "src_img": src_img,
                     "protein": request.protein,
@@ -644,6 +645,8 @@ def create_router(supabase):
                 update_data["description"] = request.description
             if request.composition is not None:
                 update_data["composition"] = request.composition
+            if request.is_available is not None:
+                update_data["is_available"] = request.is_available
             if request.price is not None:
                 update_data["price"] = request.price
             if request.protein is not None:
