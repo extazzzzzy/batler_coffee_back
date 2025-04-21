@@ -104,7 +104,7 @@ class UpdateProduct(BaseModel):
     token: str
     created_at_token: str
     product_id: int
-    name: Optional[str] = None
+    promocode: Optional[str] = None
     description: Optional[str] = None
     composition: Optional[str] = None
     is_available: Optional[bool] = None
@@ -120,7 +120,7 @@ class UpdatePromocode(BaseModel):
     token: str
     created_at_token: str
     promocode_id: int
-    name: Optional[str] = None
+    promocode: Optional[str] = None
     description: Optional[str] = None
     is_active: Optional[bool] = None
     discount: Optional[str] = None
