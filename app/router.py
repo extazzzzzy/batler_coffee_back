@@ -1070,6 +1070,14 @@ def create_router(supabase):
                 .eq("role", 1) \
                 .execute()
             administrators = administrators_response.data
+            current_user_id_admin = supabase.table("personal_access_tokens") \
+                .select("user_id") \
+                .eq("token", hash_token(request.token)) \
+                .execute().data[0]['user_id']
+            current_login_admin = supabase.table("users") \
+                .select("phone_number") \
+                .eq("id", current_user_id_admin) \
+                .execute().data[0]['phone_number']
 
             formatted_administrators = []
             for administrator in administrators:
@@ -1081,6 +1089,7 @@ def create_router(supabase):
             return {
                 "success": True,
                 "administrators": formatted_administrators,
+                "current_login_admin": current_login_admin,
             }
             
         except Exception as e:
