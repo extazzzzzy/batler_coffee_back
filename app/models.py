@@ -57,6 +57,11 @@ class DeleteProduct(BaseModel):
     created_at_token: str
     product_id: int
 
+class DeleteIngredient(BaseModel):
+    token: str
+    created_at_token: str
+    ingredient_id: int
+
 class CreateProduct(BaseModel):
     token: str
     created_at_token: str
@@ -70,6 +75,12 @@ class CreateProduct(BaseModel):
     carbohydrates: str
     weight: str
     kilocalories: str
+
+class CreateIngredient(BaseModel):
+    token: str
+    created_at_token: str
+    name: str
+    price: str
 
 class UpdateProduct(BaseModel):
     token: str
@@ -85,3 +96,10 @@ class UpdateProduct(BaseModel):
     carbohydrates: Optional[str] = None
     weight: Optional[str] = None
     kilocalories: Optional[str] = None
+
+class UpdateIngredient(BaseModel):
+    token: str
+    created_at_token: str
+    ingredient_id: int
+    name: Optional[str] = None
+    price: Optional[str] = None

@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.models import VerifyRequest, AuthRequest, UserDataRequest, UseOnlyTokenRequest, \
       CreateOrderRequest, CheckPromocodeRequest, SignUpNewAdmin, SignInAdmin, EditProductsIngredients, \
-      DeleteProduct, CreateProduct, UpdateProduct
+      DeleteProduct, CreateProduct, UpdateProduct, DeleteIngredient, CreateIngredient, UpdateIngredient
 
 import os
 from jose import jwt
@@ -536,7 +536,7 @@ def create_router(supabase):
             )
 
     # Маршрут для удаления продукта
-    @router.post("/delete_product")
+    @router.delete("/delete_product")
     async def delete_product(request: DeleteProduct):
         if not is_existing_token_admin(request):
             raise HTTPException(
@@ -724,6 +724,92 @@ def create_router(supabase):
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Ошибка при получении ингредиентов: {str(e)}"
+            )
+        
+    # Маршрут для удаления ингредиента
+    @router.delete("/delete_ingredient")
+    async def delete_ingredient(request: DeleteIngredient):
+        if not is_existing_token_admin(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        try:
+            try:
+                supabase.table("products_to_ingredients") \
+                    .delete() \
+                    .eq("ingredient_id", request.ingredient_id) \
+                    .execute()
+            except Exception as links_error:
+                print(f"Ошибка удаления связей с ингредиентами: {str(links_error)}")
+
+            supabase.table("ingredients") \
+                .delete() \
+                .eq("id", request.ingredient_id) \
+                .execute()
+            
+            return {
+                "message": "Ингредиент успешно удалён",
+            }
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка удаления: {str(e)}"
+            )
+
+    # Маршрут для создания ингредиента
+    @router.post("/create_ingredient")
+    async def create_ingredient(request: CreateIngredient):
+        if not is_existing_token_admin(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        try:
+            supabase.table("ingredients").insert({
+                    "name": request.name,
+                    "price": request.price,
+            }).execute()
+
+            return {
+                "message": "Ингредиент успешно создан"
+            }
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка создания: {str(e)}"
+            )
+    
+    # Маршрут для обновления данных о ингредиенте
+    @router.post("/update_ingredient")
+    async def update_ingredient(request: UpdateIngredient):
+        if not is_existing_token_admin(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        
+        try:
+            update_data = {}
+            
+            if request.name is not None:
+                update_data["name"] = request.name
+            if request.price is not None:
+                update_data["price"] = request.price
+            
+            # Обновляем только если есть что обновлять
+            if update_data:
+                supabase.table("ingredients").update(update_data).eq("id", request.ingredient_id).execute()
+            
+            return {
+                "message": "Ингредиент успешно обновлен"
+            }
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка обновления: {str(e)}"
             )
 
     return router
