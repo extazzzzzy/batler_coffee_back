@@ -2,7 +2,8 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.models import VerifyRequest, AuthRequest, UserDataRequest, UseOnlyTokenRequest, \
       CreateOrderRequest, CheckPromocodeRequest, SignUpNewAdmin, SignInAdmin, EditProductsIngredients, \
-      DeleteProduct, CreateProduct, UpdateProduct, DeleteIngredient, CreateIngredient, UpdateIngredient
+      DeleteProduct, CreateProduct, UpdateProduct, DeleteIngredient, CreateIngredient, UpdateIngredient, \
+      DeletePromocode, CreatePromocode, UpdatePromocode
 
 import os
 from jose import jwt
@@ -417,6 +418,7 @@ def create_router(supabase):
                         "promocode": promocode["promocode"],
                         "description": promocode["description"],
                         "src_img": promocode["src_img"],
+                        "is_acitve": promocode["is_active"],
                     })
             
             return {
@@ -807,6 +809,133 @@ def create_router(supabase):
             
             return {
                 "message": "Ингредиент успешно обновлен"
+            }
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка обновления: {str(e)}"
+            )
+        
+    # Маршрут для удаления промокода
+    @router.delete("/delete_promocode")
+    async def delete_promocode(request: DeletePromocode):
+        if not is_existing_token_admin(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        try:
+            supabase.table("promocodes") \
+                .delete() \
+                .eq("id", request.promocode_id) \
+                .execute()
+            
+            return {
+                "message": "Промокод успешно удалён",
+            }
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка удаления: {str(e)}"
+            )
+        
+    # Маршрут для создания промоакции
+    @router.post("/create_promocode")
+    async def create_promocode(request: CreatePromocode):
+        if not is_existing_token_admin(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        try:
+            # ОБРАБОТКА ИЗОБРАЖЕНИЯ ИЗ BASE64
+            base64_img = request.base64_img
+            if ',' in base64_img:
+                base64_img = base64_img.split(',')[1]
+            img_data = base64.b64decode(base64_img)
+            filename = f"{uuid.uuid4()}.jpg"
+            filepath = os.path.join("app/src/img/promo/", filename)
+            with open(filepath, "wb") as f:
+                f.write(img_data)
+            src_img = str(os.getenv("PATH_IMG")) + "promo/" + str(filename)
+
+            supabase.table("promocodes").insert({
+                    "promocode": request.promocode,
+                    "description": request.description,
+                    "is_active": request.is_active,
+                    "discount": request.discount,
+                    "min_total_sum": request.min_total_sum,
+                    "is_percent": request.is_percent,
+                    "src_img": src_img,
+            }).execute()
+
+            return {
+                "message": "Промокод успешно создан"
+            }
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка создания: {str(e)}"
+            )
+    
+    # Маршрут для обновления данных о промоакции
+    @router.post("/update_promocode")
+    async def update_promocode(request: UpdatePromocode):
+        if not is_existing_token_admin(request):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        
+        try:
+            update_data = {}
+            
+            if request.name is not None:
+                update_data["name"] = request.name
+            if request.description is not None:
+                update_data["description"] = request.description
+            if request.is_active is not None:
+                update_data["is_active"] = request.is_active
+            if request.discount is not None:
+                update_data["discount"] = request.discount
+            if request.min_total_sum is not None:
+                update_data["min_total_sum"] = request.min_total_sum
+            if request.is_percent is not None:
+                update_data["is_percent"] = request.is_percent
+            
+            if request.base64_img is not None:
+                # удаление старого изображения с сервера
+                product = supabase.table("promocodes") \
+                    .select("src_img") \
+                    .eq("id", request.promocode_id) \
+                    .execute()
+                src_img = product.data[0]['src_img']
+
+                try:
+                    filename = os.path.basename(src_img)
+                    full_path = os.path.join("app/src/img/promo/", filename)
+                    if os.path.exists(full_path):
+                        os.remove(full_path)
+                except Exception as img_error:
+                    print(f"Ошибка удаления изображения: {str(img_error)}")
+                
+                # создание нового изображения
+                base64_img = request.base64_img
+                if ',' in base64_img:
+                    base64_img = base64_img.split(',')[1]
+                img_data = base64.b64decode(base64_img)
+                filename = f"{uuid.uuid4()}.jpg"
+                filepath = os.path.join("app/src/img/promo/", filename)
+                with open(filepath, "wb") as f:
+                    f.write(img_data)
+                src_img = str(os.getenv("PATH_IMG")) + "promo/" + str(filename)
+                update_data["src_img"] = src_img
+            
+            # Обновляем только если есть что обновлять
+            if update_data:
+                supabase.table("promocodes").update(update_data).eq("id", request.promocode_id).execute()
+            
+            return {
+                "message": "Промокод успешно обновлен"
             }
 
         except Exception as e:

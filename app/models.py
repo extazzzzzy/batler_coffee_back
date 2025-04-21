@@ -62,6 +62,11 @@ class DeleteIngredient(BaseModel):
     created_at_token: str
     ingredient_id: int
 
+class DeletePromocode(BaseModel):
+    token: str
+    created_at_token: str
+    promocode_id: int
+
 class CreateProduct(BaseModel):
     token: str
     created_at_token: str
@@ -83,6 +88,18 @@ class CreateIngredient(BaseModel):
     name: str
     price: str
 
+class CreatePromocode(BaseModel):
+    token: str
+    created_at_token: str
+    promocode: str
+    description: str
+    is_active: bool
+    discount: str
+    min_total_sum: str
+    is_percent: bool
+    base64_img: str
+
+
 class UpdateProduct(BaseModel):
     token: str
     created_at_token: str
@@ -98,6 +115,18 @@ class UpdateProduct(BaseModel):
     carbohydrates: Optional[str] = None
     weight: Optional[str] = None
     kilocalories: Optional[str] = None
+
+class UpdatePromocode(BaseModel):
+    token: str
+    created_at_token: str
+    promocode_id: int
+    name: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+    discount: Optional[str] = None
+    min_total_sum: Optional[str] = None
+    base64_img: Optional[str] = None
+    is_percent: Optional[bool] = None
 
 class UpdateIngredient(BaseModel):
     token: str
